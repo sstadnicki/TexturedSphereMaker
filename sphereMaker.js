@@ -7,6 +7,10 @@ var tilingRes = 100;
 var distortionStrength = 0.02;
 var distortionFreq = 5;
 
+var lightAngle = 0;
+
+var directionalLight;
+
 // sourcePointList is an array of points - the sphere's surface will be modulated
 // by a function of the distance of each point on the sphere to the closest
 // of these points.
@@ -234,18 +238,23 @@ function initialize () {
   var octahedronGeometry = new THREE.BufferGeometry();
   octahedronGeometry.addAttribute('position', new THREE.BufferAttribute(vertexList, 3));
   octahedronGeometry.setIndex( new THREE.BufferAttribute(triangleIndexList, 1));
+  octahedronGeometry.computeVertexNormals();
 
-  var material = new THREE.RawShaderMaterial( {
-    vertexShader: document.getElementById( 'vertexShader' ).textContent,
-    fragmentShader: document.getElementById( 'fragmentShader' ) .textContent,
-    transparent: false,
-    extensions: {
-      derivatives: true
-    }
-  } );
+  // Use a basic Lambert (Phong-shaded) material for lighting
+  var material = new THREE.MeshLambertMaterial( {color: 0xc0c0ff} );
 
+  // Build a (three.js) mesh from the vertices and add it to the scene
   octahedronMesh = new THREE.Mesh(octahedronGeometry, material);
   scene.add(octahedronMesh);
+
+  // Add some gentle ambient light to the scene...
+  let ambientLight = new THREE.AmbientLight(0x606060);
+  scene.add(ambientLight);
+  // ...and a directional light
+  directionalLight = new THREE.DirectionalLight();
+  // directionalLight.position.set( 10.0*Math.cos(lightAngle), 0.0, 10.0*Math.sin(lightAngle) );
+  directionalLight.position.set( 5.0, 0, 8.5);
+  scene.add(directionalLight);
 
   renderer.setClearColor( 0x101010 );
   renderer.setPixelRatio( window.devicePixelRatio );
@@ -261,6 +270,8 @@ function animate () {
 
 function render () {
   octahedronMesh.rotation.y += .005;
+  lightAngle -= .010;
+  // directionalLight.position.set( 10.0*Math.cos(lightAngle), 0.0, 10.0*Math.sin(lightAngle) );
   renderer.render(scene,camera);
 }
 
