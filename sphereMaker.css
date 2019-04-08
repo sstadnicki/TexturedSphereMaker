@@ -1,0 +1,47 @@
+.gridWrapper {
+  display: grid;
+  grid-template-columns: repeat(5, minmax(80px, 1fr));
+  grid-template-rows: repeat(4, minmax(80px, 1fr));
+  grid-gap: 0px;
+  height: 100vh;
+}
+.displayPanel {
+  grid-column: 1 / span 3;
+  grid-row: 1 / span 3;
+  display: block;
+  min-width: 200px;
+  font-size: 0px;
+}
+.pointList {
+  grid-column: 4;
+  grid-row: 1 / 4;
+}
+.presetLists {
+  grid-column: 5;
+  grid-row: 1;
+}
+.wavePattern {
+  grid-column: 5;
+  grid-row: 2;
+}
+.frequency {
+  grid-column: 5;
+  grid-row: 3;
+}
+.exportTop {
+  grid-column: 1;
+  grid-row: 4;
+}
+.exportBottom {
+  grid-column: 2;
+  grid-row: 4;
+}
+.exportAll {
+  grid-column: 3;
+  grid-row: 4;
+}
+
+#webGLContainer {
+  min-width: 100%;
+  min-height: 100%;
+}

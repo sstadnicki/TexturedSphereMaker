@@ -221,8 +221,11 @@ function Octahedron () {
 }
 
 function initialize () {
-  camera = new THREE.PerspectiveCamera( 50, window.innerWidth / window.innerHeight, 1, 10 );
+  console.log("Init container size: " + containerElement.clientWidth + "x" + containerElement.clientHeight);
+  camera = new THREE.PerspectiveCamera( 50, containerElement.clientWidth / containerElement.clientHeight, 1, 10 );
   camera.position.z = 8.0;
+  camera.aspect = containerElement.clientWidth/containerElement.clientHeight;
+  camera.updateProjectionMatrix();
 
   renderer = new THREE.WebGLRenderer();
 
@@ -258,7 +261,7 @@ function initialize () {
 
   renderer.setClearColor( 0x101010 );
   renderer.setPixelRatio( window.devicePixelRatio );
-  renderer.setSize( window.innerWidth, window.innerHeight );
+  renderer.setSize( containerElement.clientWidth, containerElement.clientHeight );
   containerElement.appendChild( renderer.domElement );
   window.addEventListener( 'resize', onWindowResize, false );
 }
@@ -276,6 +279,7 @@ function render () {
 }
 
 function onWindowResize (event) {
+  console.log("Resizing container: " + containerElement.clientWidth + "x" + containerElement.clientHeight);
   camera.aspect = containerElement.clientWidth/containerElement.clientHeight;
   camera.updateProjectionMatrix();
   renderer.setSize(containerElement.clientWidth, containerElement.clientHeight);

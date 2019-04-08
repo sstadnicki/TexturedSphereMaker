@@ -1,0 +1,54 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <title>Sphere Maker</title>
+  <link rel="stylesheet" href="sphereMaker.css">
+</head>
+
+<body onload="initAndAnimate()">
+<div class="gridWrapper">
+  <div class="displayPanel">
+    <div id="webGLContainer"></div>
+  </div>
+  <div class="pointList">
+    PointList
+  </div>
+  <div class="presetLists">
+     PresetList
+  </div>
+  <div class="wavePattern">
+    WavePatterns
+  </div>
+  <div class="frequency">
+    Frequency
+  </div>
+  <div class="exportTop">
+    <button type="button" style="display: block; margin: 0 auto;">
+      EXPORT TOP
+    </button>
+  </div>
+  <div class="exportBottom">
+    <button type="button" style="display: block; margin: 0 auto;">
+      EXPORT BOTTOM
+    </button>
+  </div>
+  <div class="exportAll">
+    <button type="button" style="display: block; margin: 0 auto;">
+      EXPORT ALL
+    </button>
+  </div>
+</div>
+<script>
+  var containerElement = document.getElementById( 'webGLContainer' );
+</script>
+<script src="../../external/three.js"></script>
+<script src="sphereMaker.js"></script>
+<script>
+  function initAndAnimate() {
+    initialize();
+    animate();
+  }
+</script>
+</body>
+</html>
