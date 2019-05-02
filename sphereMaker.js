@@ -11,20 +11,6 @@ var lightAngle = 0;
 
 var directionalLight;
 
-// sourcePointList is an array of points - the sphere's surface will be modulated
-// by a function of the distance of each point on the sphere to the closest
-// of these points.
-var sourcePointList = [
-  1,  1,  1,
- -1,  1,  1,
-  1, -1,  1,
- -1, -1,  1,
-  1,  1, -1,
- -1,  1, -1,
-  1, -1, -1,
- -1, -1, -1
-];
-
 function FaceGeometry (xDirection, yDirection, zDirection, orientation, resolution) {
   this.vertexList = new Float32Array(3*(resolution+1)*(resolution+2)/2);
   this.triangleIndexList = new Uint32Array(3*resolution*resolution);
@@ -114,7 +100,7 @@ function FaceGeometry (xDirection, yDirection, zDirection, orientation, resoluti
   }
 }
 
-function MinDistToSource(vertX, vertY, vertZ) {
+function MinDistToSource(vertX, vertY, vertZ, sourcePointList) {
   let minDist = Number.MAX_VALUE;
   let sourcePointCount = sourcePointList.length/3;
   for (let sourcePointIdx = 0; sourcePointIdx < sourcePointCount; sourcePointIdx++) {
@@ -131,7 +117,7 @@ function MinDistToSource(vertX, vertY, vertZ) {
   return minDist;
 }
 
-function DistortVertexList (vertexList) {
+function DistortVertexList (vertexList, sourcePointList) {
   // First, figure out the maximum (spherical) distance from
   // any point on the sphere to any of the source points.
   let vertexCount = vertexList.length/3;
@@ -140,7 +126,7 @@ function DistortVertexList (vertexList) {
     let vertX = vertexList[3*vertexIdx+0];
     let vertY = vertexList[3*vertexIdx+1];
     let vertZ = vertexList[3*vertexIdx+2];
-    let minDist = MinDistToSource(vertX, vertY, vertZ);
+    let minDist = MinDistToSource(vertX, vertY, vertZ, sourcePointList);
     if (minDist > maxMinDist) maxMinDist = minDist;
   }
   // Now that we have that, we can 'normalize' minimal distances by
@@ -150,7 +136,7 @@ function DistortVertexList (vertexList) {
     let vertX = vertexList[3*vertexIdx+0];
     let vertY = vertexList[3*vertexIdx+1];
     let vertZ = vertexList[3*vertexIdx+2];
-    let minDist = MinDistToSource(vertX, vertY, vertZ);
+    let minDist = MinDistToSource(vertX, vertY, vertZ, sourcePointList);
     let normDist = minDist / maxMinDist;
     let displacement = distortionStrength * Math.cos(distortionMultiplier * normDist);
     // Displace the vertex outward (i.e., away from the origin) by the displacement.
@@ -160,11 +146,11 @@ function DistortVertexList (vertexList) {
   }
 }
 
-function DistortGeometryVertices (geometryArray) {
+function DistortGeometryVertices (geometryArray, sourcePointList) {
   // First, figure out what the maximum (spherical) distance from
   // any point on the sphere to any of the soure points.
   for (let idx = 0; idx < geometryArray.length; idx++) {
-    DistortVertexList(geometryArray[idx].vertexList);
+    DistortVertexList(geometryArray[idx].vertexList, sourcePointList);
   }
 }
 
@@ -220,7 +206,24 @@ function Octahedron () {
   }
 }
 
-function initialize () {
+
+function generateGeometry (sourcePointList) {
+  // Create the octahedron-sphere
+  var octahedronLocal = new Octahedron();
+  // tweak its vertices
+  DistortGeometryVertices(octahedronLocal.faceArray, sourcePointList);
+  // And combine the geometries into a single vertex and index list.
+  var {vertexList, triangleIndexList} = CombineGeometries(octahedronLocal.faceArray);
+
+  var octahedronGeometry = new THREE.BufferGeometry();
+  octahedronGeometry.addAttribute('position', new THREE.BufferAttribute(vertexList, 3));
+  octahedronGeometry.setIndex( new THREE.BufferAttribute(triangleIndexList, 1));
+  octahedronGeometry.computeVertexNormals();
+
+  return octahedronGeometry;
+}
+
+function initializeWebGL () {
   console.log("Init container size: " + containerElement.clientWidth + "x" + containerElement.clientHeight);
   camera = new THREE.PerspectiveCamera( 50, containerElement.clientWidth / containerElement.clientHeight, 1, 10 );
   camera.position.z = 8.0;
@@ -230,25 +233,6 @@ function initialize () {
   renderer = new THREE.WebGLRenderer();
 
   scene = new THREE.Scene();
-
-  // Create the octahedron-sphere
-  var octahedronLocal = new Octahedron();
-  // tweak its vertices
-  DistortGeometryVertices(octahedronLocal.faceArray);
-  // And combine the geometries into a single vertex and index list.
-  var {vertexList, triangleIndexList} = CombineGeometries(octahedronLocal.faceArray);
-
-  var octahedronGeometry = new THREE.BufferGeometry();
-  octahedronGeometry.addAttribute('position', new THREE.BufferAttribute(vertexList, 3));
-  octahedronGeometry.setIndex( new THREE.BufferAttribute(triangleIndexList, 1));
-  octahedronGeometry.computeVertexNormals();
-
-  // Use a basic Lambert (Phong-shaded) material for lighting
-  var material = new THREE.MeshLambertMaterial( {color: 0xc0c0ff} );
-
-  // Build a (three.js) mesh from the vertices and add it to the scene
-  octahedronMesh = new THREE.Mesh(octahedronGeometry, material);
-  scene.add(octahedronMesh);
 
   // Add some gentle ambient light to the scene...
   let ambientLight = new THREE.AmbientLight(0x606060);
@@ -264,6 +248,25 @@ function initialize () {
   renderer.setSize( containerElement.clientWidth, containerElement.clientHeight );
   containerElement.appendChild( renderer.domElement );
   window.addEventListener( 'resize', onWindowResize, false );
+}
+
+function setSceneMeshFromGeometry(geom)
+{
+  // Use a basic Lambert (Phong-shaded) material for lighting
+  var material = new THREE.MeshLambertMaterial( {color: 0xc0c0ff} );
+
+  // Build a (three.js) mesh from the vertices and add it to the scene
+  octahedronMesh = new THREE.Mesh(geom, material);
+  octahedronMesh.name = "sphereMesh";
+  let oldObject = scene.getObjectByName("sphereMesh");
+  scene.remove(oldObject);
+  scene.add(octahedronMesh);
+}
+
+function initialize (sourcePointList) {
+  let octahedronGeom = generateGeometry(sourcePointList);
+  initializeWebGL();
+  setSceneMeshFromGeometry(octahedronGeom);
 }
 
 function animate () {
