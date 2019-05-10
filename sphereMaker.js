@@ -148,7 +148,7 @@ function DistortVertexList (vertexList, sourcePointList) {
 
 function DistortGeometryVertices (geometryArray, sourcePointList) {
   // First, figure out what the maximum (spherical) distance from
-  // any point on the sphere to any of the soure points.
+  // any point on the sphere to any of the source points.
   for (let idx = 0; idx < geometryArray.length; idx++) {
     DistortVertexList(geometryArray[idx].vertexList, sourcePointList);
   }
@@ -250,8 +250,7 @@ function initializeWebGL () {
   window.addEventListener( 'resize', onWindowResize, false );
 }
 
-function setSceneMeshFromGeometry(geom)
-{
+function updateSceneMeshFromGeometry (geom) {
   // Use a basic Lambert (Phong-shaded) material for lighting
   var material = new THREE.MeshLambertMaterial( {color: 0xc0c0ff} );
 
@@ -263,10 +262,48 @@ function setSceneMeshFromGeometry(geom)
   scene.add(octahedronMesh);
 }
 
-function initialize (sourcePointList) {
+function updateHTMLFromPointList (sourcePointList) {
+  pointsListElement = document.getElementById("points");
+  // Clear out all the elements from the list of points
+  while (pointsListElement.lastChild) {
+    pointsListElement.removeChild(pointsListElement.lastChild);
+  }
+  // Now insert all of the elements in the source point list to the HTMl
+  let sourcePointCount = sourcePointList.length / 3;
+  for (sourcePointIdx = 0; sourcePointIdx < sourcePointCount; sourcePointIdx++) {
+    let listElementNode = document.createElement("li");
+    for (coordIdx = 0; coordIdx < 3; coordIdx++) {
+      let inputNode = document.createElement("input");
+      inputNode.setAttribute("type", "text");
+      inputNode.setAttribute("value", sourcePointList[3*sourcePointIdx+coordIdx]);
+      listElementNode.appendChild(inputNode);
+    }
+    pointsListElement.appendChild(listElementNode);
+  }
+}
+
+function updateSphereFromHTMLPointList () {
+  let sourcePointList = [];
+  let pointsListElement = document.getElementById("points");
+  // Walk through all the children of this
+  let listElementNodes = pointsListElement.children;
+  for (let sourcePointIdx = 0; sourcePointIdx < listElementNodes.length; sourcePointIdx++) {
+    let curListNode = listElementNodes[sourcePointIdx];
+    for (coordIdx = 0; coordIdx < 3; coordIdx++) {
+      let inputNode = curListNode.children[coordIdx];
+      let val = parseFloat(inputNode.value);
+      sourcePointList.push(val);
+    }
+  }
   let octahedronGeom = generateGeometry(sourcePointList);
+  updateSceneMeshFromGeometry(octahedronGeom);
+}
+
+function initialize (sourcePointList) {
+  updateHTMLFromPointList(sourcePointList);
   initializeWebGL();
-  setSceneMeshFromGeometry(octahedronGeom);
+  let octahedronGeom = generateGeometry(sourcePointList);
+  updateSceneMeshFromGeometry(octahedronGeom);
 }
 
 function animate () {

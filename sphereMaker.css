@@ -16,6 +16,9 @@
   grid-column: 4;
   grid-row: 1 / 4;
 }
+.pointList input {
+  width: 60px;
+}
 .presetLists {
   grid-column: 5;
   grid-row: 1;
