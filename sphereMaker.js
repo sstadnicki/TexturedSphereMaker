@@ -262,6 +262,13 @@ function updateSceneMeshFromGeometry (geom) {
   scene.add(octahedronMesh);
 }
 
+function onRemoveButtonClicked (idx, pointList) {
+  // remove the three elements that correspond to this row from the list of points
+  pointList.splice(3*idx, 3);
+  // Now update the HTML again to reflect the removal
+  updateHTMLFromPointList(pointList);
+}
+
 function updateHTMLFromPointList (sourcePointList) {
   pointsListElement = document.getElementById("points");
   // Clear out all the elements from the list of points
@@ -270,14 +277,21 @@ function updateHTMLFromPointList (sourcePointList) {
   }
   // Now insert all of the elements in the source point list to the HTMl
   let sourcePointCount = sourcePointList.length / 3;
-  for (sourcePointIdx = 0; sourcePointIdx < sourcePointCount; sourcePointIdx++) {
+  for (let sourcePointIdx = 0; sourcePointIdx < sourcePointCount; sourcePointIdx++) {
     let listElementNode = document.createElement("li");
-    for (coordIdx = 0; coordIdx < 3; coordIdx++) {
+    // add the three coordinates as input elements
+    for (let coordIdx = 0; coordIdx < 3; coordIdx++) {
       let inputNode = document.createElement("input");
       inputNode.setAttribute("type", "text");
       inputNode.setAttribute("value", sourcePointList[3*sourcePointIdx+coordIdx]);
       listElementNode.appendChild(inputNode);
     }
+    // And add the delete button for this row as a button
+    let buttonNode = document.createElement("button");
+    buttonNode.setAttribute("type", "button");
+    buttonNode.innerHTML="X";
+    buttonNode.addEventListener('click', onRemoveButtonClicked.bind(null, sourcePointIdx, sourcePointList));
+    listElementNode.appendChild(buttonNode);
     pointsListElement.appendChild(listElementNode);
   }
 }
