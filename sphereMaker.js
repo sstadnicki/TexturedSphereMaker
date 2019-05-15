@@ -11,6 +11,80 @@ var lightAngle = 0;
 
 var directionalLight;
 
+// The various Points[] arrays are vertex positions for some basic polyhedra.
+// Note that since the waves will be centered at the source points, these are
+// essentially the vertices for the dual polyhedron to the one that the ripples
+// will appear to be faces of.
+
+var tetrahedronPoints = [
+  1,  1,  1,
+ -1, -1,  1,
+ -1,  1, -1,
+  1, -1, -1
+];
+var cubePoints = [
+  1,  0,  0,
+  0,  1,  0,
+  0,  0,  1,
+ -1,  0,  0,
+  0, -1,  0,
+  0,  0, -1
+]
+var octahedronPoints = [
+  1,  1,  1,
+ -1,  1,  1,
+  1, -1,  1,
+ -1, -1,  1,
+  1,  1, -1,
+ -1,  1, -1,
+  1, -1, -1,
+ -1, -1, -1
+];
+var dodecahedronPoints = [
+      0,      1,  1.618,
+      0,      1, -1.618,
+      0,     -1,  1.618,
+      0,     -1, -1.618,
+  1.618,      0,      1,
+ -1.618,      0,      1,
+  1.618,      0,     -1,
+ -1.618,      0,     -1,
+      1,  1.618,      0,
+      1, -1.618,      0,
+     -1,  1.618,      0,
+     -1, -1.618,      0
+];
+var icosahedronPoints = [
+      1,      1,      1,
+     -1,      1,      1,
+      1,     -1,      1,
+     -1,     -1,      1,
+      1,      1,     -1,
+     -1,      1,     -1,
+      1,     -1,     -1,
+     -1,     -1,     -1,
+  1.618,  0.618,      0,
+ -1.618,  0.618,      0,
+  1.618, -0.618,      0,
+ -1.618, -0.618,      0,
+  0.618,      0,  1.618,
+  0.618,      0, -1.618,
+ -0.618,      0,  1.618,
+ -0.618,      0, -1.618,
+      0,  1.618,  0.618,
+      0, -1.618,  0.618,
+      0,  1.618, -0.618,
+      0, -1.618, -0.618
+];
+
+var presets= {
+  "Tetrahedron"  : tetrahedronPoints,
+  "Cube"         : cubePoints,
+  "Octahedron"   : octahedronPoints,
+  "Dodecahedron" : dodecahedronPoints,
+  "Icosahedron"  : icosahedronPoints
+};
+
 function FaceGeometry (xDirection, yDirection, zDirection, orientation, resolution) {
   this.vertexList = new Float32Array(3*(resolution+1)*(resolution+2)/2);
   this.triangleIndexList = new Uint32Array(3*resolution*resolution);
@@ -262,11 +336,37 @@ function updateSceneMeshFromGeometry (geom) {
   scene.add(octahedronMesh);
 }
 
-function onRemoveButtonClicked (idx, pointList) {
-  // remove the three elements that correspond to this row from the list of points
-  pointList.splice(3*idx, 3);
-  // Now update the HTML again to reflect the removal
-  updateHTMLFromPointList(pointList);
+function onRemoveButtonClicked (node, listElement) {
+  // remove the particular li element in the list that correspond to this row from the list of points
+  let listElementNodes = listElement.getElementsByClassName("point");;
+  listElement.removeChild(node);
+}
+
+function onAppendButtonClicked (listElement) {
+  // add a new row of input nodes with values 0, 0, 0
+  // the index of this row is equal to the number of li elements of class 'point'
+  // currently in the UL element
+  let rowIdx = listElement.getElementsByClassName("point").length;
+  let listElementNode = document.createElement("li");
+  listElementNode.className = "point";
+  for (let coordIdx = 0; coordIdx < 3; coordIdx++) {
+    let inputNode = document.createElement("input");
+    inputNode.setAttribute("type", "text");
+    inputNode.setAttribute("value", 0);
+    listElementNode.appendChild(inputNode);
+  }
+  let buttonNode = document.createElement("button");
+  buttonNode.setAttribute("type", "button");
+  buttonNode.innerHTML = "X";
+  buttonNode.addEventListener('click', onRemoveButtonClicked.bind(null, listElementNode, listElement));
+  listElementNode.appendChild(buttonNode);
+  // now put it in the list at the appropriate spot
+  let appendNodes = listElement.getElementsByClassName("appendButton");
+  if (appendNodes.length == 0) {
+    listElement.append(listElementNode);
+  } else {
+    listElement.insertBefore(listElementNode, appendNodes[0]);
+  }
 }
 
 function updateHTMLFromPointList (sourcePointList) {
@@ -279,6 +379,7 @@ function updateHTMLFromPointList (sourcePointList) {
   let sourcePointCount = sourcePointList.length / 3;
   for (let sourcePointIdx = 0; sourcePointIdx < sourcePointCount; sourcePointIdx++) {
     let listElementNode = document.createElement("li");
+    listElementNode.className = "point";
     // add the three coordinates as input elements
     for (let coordIdx = 0; coordIdx < 3; coordIdx++) {
       let inputNode = document.createElement("input");
@@ -289,18 +390,27 @@ function updateHTMLFromPointList (sourcePointList) {
     // And add the delete button for this row as a button
     let buttonNode = document.createElement("button");
     buttonNode.setAttribute("type", "button");
-    buttonNode.innerHTML="X";
-    buttonNode.addEventListener('click', onRemoveButtonClicked.bind(null, sourcePointIdx, sourcePointList));
+    buttonNode.innerHTML = "X";
+    buttonNode.addEventListener('click', onRemoveButtonClicked.bind(null, listElementNode, pointsListElement));
     listElementNode.appendChild(buttonNode);
     pointsListElement.appendChild(listElementNode);
   }
+  // And finally add another button that will append another row.
+  let appendListElementNode = document.createElement("li");
+  appendListElementNode.className = "appendButton";
+  let appendButtonNode = document.createElement("button");
+  appendButtonNode.setAttribute("type", "button");
+  appendButtonNode.innerHTML = "+";
+  appendButtonNode.addEventListener('click', onAppendButtonClicked.bind(null, pointsListElement));
+  appendListElementNode.appendChild(appendButtonNode);
+  pointsListElement.appendChild(appendListElementNode);
 }
 
 function updateSphereFromHTMLPointList () {
   let sourcePointList = [];
   let pointsListElement = document.getElementById("points");
   // Walk through all the children of this
-  let listElementNodes = pointsListElement.children;
+  let listElementNodes = pointsListElement.getElementsByClassName("point");;
   for (let sourcePointIdx = 0; sourcePointIdx < listElementNodes.length; sourcePointIdx++) {
     let curListNode = listElementNodes[sourcePointIdx];
     for (coordIdx = 0; coordIdx < 3; coordIdx++) {
@@ -313,11 +423,54 @@ function updateSphereFromHTMLPointList () {
   updateSceneMeshFromGeometry(octahedronGeom);
 }
 
-function initialize (sourcePointList) {
-  updateHTMLFromPointList(sourcePointList);
+function initializePresets () {
+  let presetListElement = document.getElementById("presets");
+  while (presetListElement.firstChild) {
+    presetListElement.removeChild(presetListElement.firstChild);
+  }
+  for (let presetItem in presets) {
+    let presetButtonNode = document.createElement("button");
+    presetButtonNode.setAttribute("type", "button");
+    presetButtonNode.innerHTML = presetItem;
+    presetButtonNode.addEventListener("click",
+      ((ptList) => {
+        updateHTMLFromPointList(ptList);
+        updateSphereFromHTMLPointList();
+      }).bind(null, presets[presetItem])
+    );
+    presetListElement.appendChild(presetButtonNode);
+  }
+}
+
+function initialize () {
   initializeWebGL();
-  let octahedronGeom = generateGeometry(sourcePointList);
-  updateSceneMeshFromGeometry(octahedronGeom);
+  initializePresets();
+  selectTetrahedron();
+}
+
+function selectTetrahedron () {
+  updateHTMLFromPointList(tetrahedronPoints);
+  updateSphereFromHTMLPointList();
+}
+
+function selectCube () {
+  updateHTMLFromPointList(cubePoints);
+  updateSphereFromHTMLPointList();
+}
+
+function selectOctahedron () {
+  updateHTMLFromPointList(octahedronPoints);
+  updateSphereFromHTMLPointList();
+}
+
+function selectDodecahedron () {
+  updateHTMLFromPointList(dodecahedronPoints);
+  updateSphereFromHTMLPointList();
+}
+
+function selecticosahedron () {
+  updateHTMLFromPointList(icosahedronPoints);
+  updateSphereFromHTMLPointList();
 }
 
 function animate () {

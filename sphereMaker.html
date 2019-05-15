@@ -19,13 +19,15 @@
         ><input type="text"
         ><button type="button">X</button
       ></li
+      ><li
+        ><button type="button">+</button
+      ></li
     ></ul>
     <button type="button" style="display: block; margin: 0 auto;" onclick="updateSphereFromHTMLPointList()">
       GENERATE SPHERE
     </button>
   </div>
-  <div class="presetLists">
-     PresetList
+  <div class="presetLists" id="presets">
   </div>
   <div class="wavePattern">
     WavePatterns
@@ -55,22 +57,8 @@
 <script src="../../external/three.js"></script>
 <script src="sphereMaker.js"></script>
 <script>
-  // sourcePointList is an array of points - the sphere's surface will be modulated
-  // by a function of the distance of each point on the sphere to the closest
-  // of these points.
-  let sourcePoints = [
-    1,  1,  1,
-   -1,  1,  1,
-    1, -1,  1,
-   -1, -1,  1,
-    1,  1, -1,
-   -1,  1, -1,
-    1, -1, -1,
-   -1, -1, -1
-  ];
-
   function initAndAnimate() {
-    initialize(sourcePoints);
+    initialize();
     animate();
   }
 </script>
