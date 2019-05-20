@@ -23,6 +23,9 @@
   grid-column: 5;
   grid-row: 1;
 }
+.presetLists button {
+  display: block;
+}
 .wavePattern {
   grid-column: 5;
   grid-row: 2;
