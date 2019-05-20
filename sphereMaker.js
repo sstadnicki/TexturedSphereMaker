@@ -220,14 +220,6 @@ function DistortVertexList (vertexList, sourcePointList) {
   }
 }
 
-function DistortGeometryVertices (geometryArray, sourcePointList) {
-  // First, figure out what the maximum (spherical) distance from
-  // any point on the sphere to any of the source points.
-  for (let idx = 0; idx < geometryArray.length; idx++) {
-    DistortVertexList(geometryArray[idx].vertexList, sourcePointList);
-  }
-}
-
 function CombineGeometries (geometryArray) {
   let totalVertexListLength = 0;
   let totalTriangleIndexListLength = 0;
@@ -284,10 +276,10 @@ function Octahedron () {
 function generateGeometry (sourcePointList) {
   // Create the octahedron-sphere
   var octahedronLocal = new Octahedron();
-  // tweak its vertices
-  DistortGeometryVertices(octahedronLocal.faceArray, sourcePointList);
   // And combine the geometries into a single vertex and index list.
   var {vertexList, triangleIndexList} = CombineGeometries(octahedronLocal.faceArray);
+  // tweak its vertices
+  DistortVertexList(vertexList, sourcePointList);
 
   var octahedronGeometry = new THREE.BufferGeometry();
   octahedronGeometry.addAttribute('position', new THREE.BufferAttribute(vertexList, 3));
