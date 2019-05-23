@@ -191,6 +191,29 @@ function MinDistToSource(vertX, vertY, vertZ, sourcePointList) {
   return minDist;
 }
 
+function SecondMinDistToSource(vertX, vertY, vertZ, sourcePointList) {
+  let minDist = Number.MAX_VALUE;
+  let secondMinDist = Number.MAX_VALUE;
+  let sourcePointCount = sourcePointList.length/3;
+  for (let sourcePointIdx = 0; sourcePointIdx < sourcePointCount; sourcePointIdx++) {
+    let sourcePointX = sourcePointList[3*sourcePointIdx+0];
+    let sourcePointY = sourcePointList[3*sourcePointIdx+1];
+    let sourcePointZ = sourcePointList[3*sourcePointIdx+2];
+    let sourceLen = Math.sqrt(sourcePointX*sourcePointX + sourcePointY*sourcePointY + sourcePointZ*sourcePointZ);
+    let normalizedSourceX = sourcePointX / sourceLen;
+    let normalizedSourceY = sourcePointY / sourceLen;
+    let normalizedSourceZ = sourcePointZ / sourceLen;
+    let dist = Math.acos(Math.min(Math.max(-1, vertX*normalizedSourceX + vertY*normalizedSourceY + vertZ*normalizedSourceZ), 1));
+    if (dist < minDist) {
+      secondMinDist = minDist;
+      minDist = dist;
+    } else if (dist < secondMinDist) {
+      secondMinDist = dist;
+    }
+  }
+  return secondMinDist;
+}
+
 function DistortVertexList (vertexList, sourcePointList, distortionFrequency, distortionAmplitude) {
   // First, figure out the maximum (spherical) distance from
   // any point on the sphere to any of the source points.
@@ -211,7 +234,9 @@ function DistortVertexList (vertexList, sourcePointList, distortionFrequency, di
     let vertY = vertexList[3*vertexIdx+1];
     let vertZ = vertexList[3*vertexIdx+2];
     let minDist = MinDistToSource(vertX, vertY, vertZ, sourcePointList);
-    let normDist = minDist / maxMinDist;
+    let secondMinDist = SecondMinDistToSource(vertX, vertY, vertZ, sourcePointList);
+    // let normDist = minDist / maxMinDist;
+    let normDist = minDist / secondMinDist;
     let displacement = distortionAmplitude * Math.cos(distortionMultiplier * normDist);
     // Displace the vertex outward (i.e., away from the origin) by the displacement.
     vertexList[3*vertexIdx+0] = vertX * (1.0+displacement);
