@@ -23,7 +23,7 @@
         ><button type="button">+</button
       ></li
     ></ul>
-    <button type="button" style="display: block; margin: 0 auto;" onclick="updateSphereFromHTMLPointList()">
+    <button type="button" style="display: block; margin: 0 auto;" onclick="updateSphereFromHTMLData()">
       GENERATE SPHERE
     </button>
   </div>
@@ -45,8 +45,14 @@
     <div class="listHeader">
       FREQUENCY
     </div>
-    <div id="frequency">
-      <input type="text">
+    <div>
+      <input id="frequency" type="text" value="5">
+    </div>
+    <div class="listHeader">
+      AMPLITUDE PERCENT
+    </div>
+    <div>
+      <input id="amplitudePercent" type="text" value="2">
     </div>
   </div>
   <div class="exportTop">

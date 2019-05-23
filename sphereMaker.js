@@ -2,10 +2,10 @@
 // of each triangle in the octahedron we start by tiling the sphere as...
 var tilingRes = 100;
 
-// distortionStrength is the magnitude of the distortion.
+// distortionAmplitude is the magnitude of the distortion.
 // distortionFreq is the number of bands of distortion between points
-var distortionStrength = 0.02;
-var distortionFreq = 5;
+// var distortionAmplitude = 0.02;
+// var distortionFreq = 5;
 
 var lightAngle = 0;
 
@@ -191,7 +191,7 @@ function MinDistToSource(vertX, vertY, vertZ, sourcePointList) {
   return minDist;
 }
 
-function DistortVertexList (vertexList, sourcePointList) {
+function DistortVertexList (vertexList, sourcePointList, distortionFrequency, distortionAmplitude) {
   // First, figure out the maximum (spherical) distance from
   // any point on the sphere to any of the source points.
   let vertexCount = vertexList.length/3;
@@ -205,14 +205,14 @@ function DistortVertexList (vertexList, sourcePointList) {
   }
   // Now that we have that, we can 'normalize' minimal distances by
   // the maximum minDist.
-  let distortionMultiplier = 2 * Math.PI * distortionFreq;
+  let distortionMultiplier = 2 * Math.PI * distortionFrequency;
   for (let vertexIdx = 0; vertexIdx < vertexCount; vertexIdx++) {
     let vertX = vertexList[3*vertexIdx+0];
     let vertY = vertexList[3*vertexIdx+1];
     let vertZ = vertexList[3*vertexIdx+2];
     let minDist = MinDistToSource(vertX, vertY, vertZ, sourcePointList);
     let normDist = minDist / maxMinDist;
-    let displacement = distortionStrength * Math.cos(distortionMultiplier * normDist);
+    let displacement = distortionAmplitude * Math.cos(distortionMultiplier * normDist);
     // Displace the vertex outward (i.e., away from the origin) by the displacement.
     vertexList[3*vertexIdx+0] = vertX * (1.0+displacement);
     vertexList[3*vertexIdx+1] = vertY * (1.0+displacement);
@@ -273,13 +273,13 @@ function Octahedron () {
 }
 
 
-function generateGeometry (sourcePointList) {
+function generateGeometry (sourcePointList, distortionFrequency, distortionAmplitude) {
   // Create the octahedron-sphere
   var octahedronLocal = new Octahedron();
   // And combine the geometries into a single vertex and index list.
   var {vertexList, triangleIndexList} = CombineGeometries(octahedronLocal.faceArray);
   // tweak its vertices
-  DistortVertexList(vertexList, sourcePointList);
+  DistortVertexList(vertexList, sourcePointList, distortionFrequency, distortionAmplitude);
 
   var octahedronGeometry = new THREE.BufferGeometry();
   octahedronGeometry.addAttribute('position', new THREE.BufferAttribute(vertexList, 3));
@@ -398,7 +398,7 @@ function updateHTMLFromPointList (sourcePointList) {
   pointsListElement.appendChild(appendListElementNode);
 }
 
-function updateSphereFromHTMLPointList () {
+function updateSphereFromHTMLData () {
   let sourcePointList = [];
   let pointsListElement = document.getElementById("points");
   // Walk through all the children of this
@@ -411,7 +411,9 @@ function updateSphereFromHTMLPointList () {
       sourcePointList.push(val);
     }
   }
-  let octahedronGeom = generateGeometry(sourcePointList);
+  let distortionFrequency = parseFloat(document.getElementById("frequency").value);
+  let distortionAmplitude = .01*parseFloat(document.getElementById("amplitudePercent").value);
+  let octahedronGeom = generateGeometry(sourcePointList, distortionFrequency, distortionAmplitude);
   updateSceneMeshFromGeometry(octahedronGeom);
 }
 
@@ -427,7 +429,7 @@ function initializePresets () {
     presetButtonNode.addEventListener("click",
       ((ptList) => {
         updateHTMLFromPointList(ptList);
-        updateSphereFromHTMLPointList();
+        updateSphereFromHTMLData();
       }).bind(null, presets[presetItem])
     );
     presetListElement.appendChild(presetButtonNode);
@@ -442,27 +444,27 @@ function initialize () {
 
 function selectTetrahedron () {
   updateHTMLFromPointList(tetrahedronPoints);
-  updateSphereFromHTMLPointList();
+  updateSphereFromHTMLData();
 }
 
 function selectCube () {
   updateHTMLFromPointList(cubePoints);
-  updateSphereFromHTMLPointList();
+  updateSphereFromHTMLData();
 }
 
 function selectOctahedron () {
   updateHTMLFromPointList(octahedronPoints);
-  updateSphereFromHTMLPointList();
+  updateSphereFromHTMLData();
 }
 
 function selectDodecahedron () {
   updateHTMLFromPointList(dodecahedronPoints);
-  updateSphereFromHTMLPointList();
+  updateSphereFromHTMLData();
 }
 
 function selecticosahedron () {
   updateHTMLFromPointList(icosahedronPoints);
-  updateSphereFromHTMLPointList();
+  updateSphereFromHTMLData();
 }
 
 function animate () {
