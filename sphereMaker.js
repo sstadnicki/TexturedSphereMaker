@@ -2,11 +2,6 @@
 // of each triangle in the octahedron we start by tiling the sphere as...
 var tilingRes = 100;
 
-// distortionAmplitude is the magnitude of the distortion.
-// distortionFreq is the number of bands of distortion between points
-// var distortionAmplitude = 0.02;
-// var distortionFreq = 5;
-
 var lightAngle = 0;
 
 var directionalLight;
@@ -77,12 +72,20 @@ var icosahedronPoints = [
       0, -1.618, -0.618
 ];
 
-var presets= {
+var presets = {
   "Tetrahedron"  : tetrahedronPoints,
   "Cube"         : cubePoints,
   "Octahedron"   : octahedronPoints,
   "Dodecahedron" : dodecahedronPoints,
   "Icosahedron"  : icosahedronPoints
+};
+
+var waveFunctions = {
+  "Sine"        : x => (Math.sin(2 * Math.PI * x)),
+  "SineSquared" : x => (Math.sin(Math.PI * x) * Math.sin(Math.PI * x)),
+  "Triangle"    : x => (x < 0.5 ? 2 * x : 2 * (1-x)),
+  "Sawtooth"    : x => (x < 0.95 ? x / 0.95 : (1-x) / 0.05),
+  "Square"      : x => (1)
 };
 
 function FaceGeometry (xDirection, yDirection, zDirection, orientation, resolution) {
@@ -214,7 +217,7 @@ function SecondMinDistToSource(vertX, vertY, vertZ, sourcePointList) {
   return secondMinDist;
 }
 
-function DistortVertexList (vertexList, sourcePointList, distortionFrequency, distortionAmplitude) {
+function DistortVertexList (vertexList, sourcePointList, distortionInfo) {
   // First, figure out the maximum (spherical) distance from
   // any point on the sphere to any of the source points.
   let vertexCount = vertexList.length/3;
@@ -228,16 +231,15 @@ function DistortVertexList (vertexList, sourcePointList, distortionFrequency, di
   }
   // Now that we have that, we can 'normalize' minimal distances by
   // the maximum minDist.
-  let distortionMultiplier = 2 * Math.PI * distortionFrequency;
   for (let vertexIdx = 0; vertexIdx < vertexCount; vertexIdx++) {
     let vertX = vertexList[3*vertexIdx+0];
     let vertY = vertexList[3*vertexIdx+1];
     let vertZ = vertexList[3*vertexIdx+2];
     let minDist = MinDistToSource(vertX, vertY, vertZ, sourcePointList);
     let secondMinDist = SecondMinDistToSource(vertX, vertY, vertZ, sourcePointList);
-    // let normDist = minDist / maxMinDist;
-    let normDist = minDist / secondMinDist;
-    let displacement = distortionAmplitude * Math.cos(distortionMultiplier * normDist);
+    let normDist = distortionInfo.waveShapeBlendAlpha * (minDist/maxMinDist) + (1-distortionInfo.waveShapeBlendAlpha) * (minDist/secondMinDist);
+    let waveFuncArgument = (distortionInfo.frequency*normDist) - Math.trunc(distortionInfo.frequency*normDist);
+    let displacement = distortionInfo.amplitude * distortionInfo.function(waveFuncArgument);
     // Displace the vertex outward (i.e., away from the origin) by the displacement.
     vertexList[3*vertexIdx+0] = vertX * (1.0+displacement);
     vertexList[3*vertexIdx+1] = vertY * (1.0+displacement);
@@ -298,13 +300,13 @@ function Octahedron () {
 }
 
 
-function generateGeometry (sourcePointList, distortionFrequency, distortionAmplitude) {
+function generateGeometry (sourcePointList, distortionInfo) {
   // Create the octahedron-sphere
   var octahedronLocal = new Octahedron();
   // And combine the geometries into a single vertex and index list.
   var {vertexList, triangleIndexList} = CombineGeometries(octahedronLocal.faceArray);
   // tweak its vertices
-  DistortVertexList(vertexList, sourcePointList, distortionFrequency, distortionAmplitude);
+  DistortVertexList(vertexList, sourcePointList, distortionInfo);
 
   var octahedronGeometry = new THREE.BufferGeometry();
   octahedronGeometry.addAttribute('position', new THREE.BufferAttribute(vertexList, 3));
@@ -349,6 +351,9 @@ function updateSceneMeshFromGeometry (geom) {
   octahedronMesh = new THREE.Mesh(geom, material);
   octahedronMesh.name = "sphereMesh";
   let oldObject = scene.getObjectByName("sphereMesh");
+  if (oldObject) {
+    octahedronMesh.rotation.y = oldObject.rotation.y;
+  }
   scene.remove(oldObject);
   scene.add(octahedronMesh);
 }
@@ -436,9 +441,14 @@ function updateSphereFromHTMLData () {
       sourcePointList.push(val);
     }
   }
-  let distortionFrequency = parseFloat(document.getElementById("frequency").value);
-  let distortionAmplitude = .01*parseFloat(document.getElementById("amplitudePercent").value);
-  let octahedronGeom = generateGeometry(sourcePointList, distortionFrequency, distortionAmplitude);
+  let distortionInfo = {
+    frequency : parseFloat(document.getElementById("frequency").value),
+    amplitude : .01*parseFloat(document.getElementById("amplitudePercent").value),
+    waveShapeBlendAlpha : parseFloat(document.getElementById("wavefrontShapeAlpha").value),
+    function  : waveFunctions[document.getElementById("waves").value]
+  };
+  // let distortionFunction = x => Math.cos(x);
+  let octahedronGeom = generateGeometry(sourcePointList, distortionInfo);
   updateSceneMeshFromGeometry(octahedronGeom);
 }
 
@@ -461,9 +471,23 @@ function initializePresets () {
   }
 }
 
+function initializeWaveFunctions () {
+  let waveFunctionSelectElement = document.getElementById("waves");
+  while (waveFunctionSelectElement.firstChild) {
+    waveFunctionSelectElement.removeChild(waveFunctionSelectElement.firstChild);
+  }
+  for (let waveFunctionItem in waveFunctions) {
+    let waveFunctionOptionNode = document.createElement("option");
+    waveFunctionOptionNode.setAttribute("value", waveFunctionItem);
+    waveFunctionOptionNode.innerHTML = waveFunctionItem;
+    waveFunctionSelectElement.appendChild(waveFunctionOptionNode);
+  }
+}
+
 function initialize () {
   initializeWebGL();
   initializePresets();
+  initializeWaveFunctions();
   selectTetrahedron();
 }
 

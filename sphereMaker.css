@@ -19,18 +19,22 @@
 .pointList input {
   width: 60px;
 }
-.presetLists {
+.rightPanel {
+  grid-column: 5;
+  grid-row 1 /span 3;
+}
+.XpresetLists {
   grid-column: 5;
   grid-row: 1;
 }
 .presetLists button {
   display: block;
 }
-.wavePattern {
+.XwavePattern {
   grid-column: 5;
   grid-row: 2;
 }
-.frequency {
+.Xfrequency {
   grid-column: 5;
   grid-row: 3;
 }

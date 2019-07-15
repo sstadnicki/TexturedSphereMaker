@@ -27,6 +27,7 @@
       GENERATE SPHERE
     </button>
   </div>
+  <div class="rightPanel">
   <div class="presetLists">
     <div class="listHeader">
       PRESETS
@@ -36,9 +37,30 @@
   </div>
   <div class="wavePattern">
     <div class="listHeader">
+      WAVEFRONT SHAPE
+    </div>
+    <div>
+      <input id="wavefrontShapeAlpha" type="range" min="0" max="1" step=".01" value="1" oninput="updateSphereFromHTMLData()">
+    </div>
+    <div class="listHeader">
       WAVE PATTERNS
     </div>
-    <div id="waves">
+    <select id="waves" onChange="updateSphereFromHTMLData()">
+    </select>
+    <div>
+      <canvas class="waveCanvas" width="150px" height="100px">
+    </div>
+    <div class="listHeader">
+      WIDTH
+    </div>
+    <div>
+      <input id="waveWidth" type="text" value="1">
+    </div>
+    <div class="listHeader">
+      OFFSET
+    </div>
+    <div>
+      <input id="waveOffset" type="text" value="0">
     </div>
   </div>
   <div class="frequency">
@@ -46,7 +68,7 @@
       FREQUENCY
     </div>
     <div>
-      <input id="frequency" type="text" value="5">
+      <input id="frequency" type="text" value="3">
     </div>
     <div class="listHeader">
       AMPLITUDE PERCENT
@@ -54,6 +76,7 @@
     <div>
       <input id="amplitudePercent" type="text" value="2">
     </div>
+  </div>
   </div>
   <div class="exportTop">
     <button type="button" style="display: block; margin: 0 auto;">
