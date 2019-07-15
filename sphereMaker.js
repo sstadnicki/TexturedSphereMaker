@@ -238,7 +238,9 @@ function DistortVertexList (vertexList, sourcePointList, distortionInfo) {
     let minDist = MinDistToSource(vertX, vertY, vertZ, sourcePointList);
     let secondMinDist = SecondMinDistToSource(vertX, vertY, vertZ, sourcePointList);
     let normDist = distortionInfo.waveShapeBlendAlpha * (minDist/maxMinDist) + (1-distortionInfo.waveShapeBlendAlpha) * (minDist/secondMinDist);
-    let waveFuncArgument = (distortionInfo.frequency*normDist) - Math.trunc(distortionInfo.frequency*normDist);
+    let offsetPos = distortionInfo.frequency*normDist-distortionInfo.offset;
+    let periodPos = offsetPos - Math.trunc(offsetPos);
+    let waveFuncArgument = Math.max(0.0, Math.min(periodPos / distortionInfo.width, 1.0));
     let displacement = distortionInfo.amplitude * distortionInfo.function(waveFuncArgument);
     // Displace the vertex outward (i.e., away from the origin) by the displacement.
     vertexList[3*vertexIdx+0] = vertX * (1.0+displacement);
@@ -445,7 +447,9 @@ function updateSphereFromHTMLData () {
     frequency : parseFloat(document.getElementById("frequency").value),
     amplitude : .01*parseFloat(document.getElementById("amplitudePercent").value),
     waveShapeBlendAlpha : parseFloat(document.getElementById("wavefrontShapeAlpha").value),
-    function  : waveFunctions[document.getElementById("waves").value]
+    function  : waveFunctions[document.getElementById("waves").value],
+    width     : parseFloat(document.getElementById("waveShapeWidth").value),
+    offset    : parseFloat(document.getElementById("waveShapeOffset").value)
   };
   // let distortionFunction = x => Math.cos(x);
   let octahedronGeom = generateGeometry(sourcePointList, distortionInfo);
