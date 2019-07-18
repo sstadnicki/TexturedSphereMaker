@@ -239,8 +239,9 @@ function DistortVertexList (vertexList, sourcePointList, distortionInfo) {
     let secondMinDist = SecondMinDistToSource(vertX, vertY, vertZ, sourcePointList);
     let normDist = distortionInfo.waveShapeBlendAlpha * (minDist/maxMinDist) + (1-distortionInfo.waveShapeBlendAlpha) * (minDist/secondMinDist);
     let offsetPos = distortionInfo.frequency*normDist-distortionInfo.offset;
-    let periodPos = offsetPos - Math.trunc(offsetPos);
-    let waveFuncArgument = Math.max(0.0, Math.min(periodPos / distortionInfo.width, 1.0));
+    let periodPos = offsetPos - Math.floor(offsetPos);
+    let expandedPos = (distortionInfo.width < 0 ? periodPos-1 : periodPos) / distortionInfo.width;
+    let waveFuncArgument = Math.max(0.0, Math.min(expandedPos, 1.0));
     let displacement = distortionInfo.amplitude * distortionInfo.function(waveFuncArgument);
     // Displace the vertex outward (i.e., away from the origin) by the displacement.
     vertexList[3*vertexIdx+0] = vertX * (1.0+displacement);
@@ -430,7 +431,7 @@ function updateHTMLFromPointList (sourcePointList) {
   pointsListElement.appendChild(appendListElementNode);
 }
 
-function updateSphereFromHTMLData () {
+function getGeneratorDataFromHTML () {
   let sourcePointList = [];
   let pointsListElement = document.getElementById("points");
   // Walk through all the children of this
@@ -451,7 +452,11 @@ function updateSphereFromHTMLData () {
     width     : parseFloat(document.getElementById("waveShapeWidth").value),
     offset    : parseFloat(document.getElementById("waveShapeOffset").value)
   };
-  // let distortionFunction = x => Math.cos(x);
+  return {sourcePointList, distortionInfo};
+}
+
+function updateSphereFromHTMLData () {
+  let {sourcePointList, distortionInfo} = getGeneratorDataFromHTML();
   let octahedronGeom = generateGeometry(sourcePointList, distortionInfo);
   updateSceneMeshFromGeometry(octahedronGeom);
 }
@@ -537,5 +542,40 @@ function onWindowResize (event) {
   camera.aspect = containerElement.clientWidth/containerElement.clientHeight;
   camera.updateProjectionMatrix();
   renderer.setSize(containerElement.clientWidth, containerElement.clientHeight);
+}
+
+function exportAll () {
+  // First, build up a string representing the STL data
+  let outSTLString = "";
+  // Write the header
+  outSTLString += "solid texturedSphere\n";
+  // Now generate geometry corresponding to the current distortion
+  // Find the current distortion
+  let {sourcePointList, distortionInfo} = getGeneratorDataFromHTML();
+  // Create the octahedron-sphere
+  let octahedronLocal = new Octahedron();
+  // And combine the geometries into a single vertex and index list.
+  let {vertexList, triangleIndexList} = CombineGeometries(octahedronLocal.faceArray);
+  // tweak its vertices
+  DistortVertexList(vertexList, sourcePointList, distortionInfo);
+  // Now go through all of the triangles in the generated geometry...
+  let triangleCount = triangleIndexList.length/3;
+  for (let triangleIdx=0; triangleIdx < triangleCount; triangleIdx++) {
+    let vertIndices = triangleIndexList.slice(3*triangleIdx, 3);
+    // Write the normal data
+    outSTLString += "facet normal 0,0,0\n";
+    // and write the data for each of the three vertices in turn.
+    outSTLString += "outer loop\n";
+    for (let vertIdx = 0; vertIdx < 3; vertIdx++) {
+      outSTLString += "vertex";
+      outSTLString += " " + vertexList[3*vertIndices[vertIdx]+0];
+      outSTLString += " " + vertexList[3*vertIndices[vertIdx]+1];
+      outSTLString += " " + vertexList[3*vertIndices[vertIdx]+2];
+      outSTLString += "\n";
+    }
+    outSTLString += "endloop\n";
+    outSTLString += "endfacet\n";
+  }
+  outSTLString += "endsolid texturedSphere\n";
 }
 
