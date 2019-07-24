@@ -558,19 +558,40 @@ function exportAll () {
   let {vertexList, triangleIndexList} = CombineGeometries(octahedronLocal.faceArray);
   // tweak its vertices
   DistortVertexList(vertexList, sourcePointList, distortionInfo);
+  // Construct a small 'holding zone' of floats for the three verts of each triangle,
+  // so we can compute cross products a bit more easily and such.
+  let vertexHoldingArray = new Float32Array(9);
   // Now go through all of the triangles in the generated geometry...
   let triangleCount = triangleIndexList.length/3;
   for (let triangleIdx=0; triangleIdx < triangleCount; triangleIdx++) {
     let vertIndices = triangleIndexList.slice(3*triangleIdx, 3*(triangleIdx+1));
+    for (let vertIdx = 0; vertIdx < 3; vertIdx++) {
+      vertexHoldingArray.set(vertexList.slice(3*vertIndices[vertIdx], 3*(vertIndices[vertIdx]+1)), 3*vertIdx);
+    }
+    // compute difference vectors
+    let diff10x = vertexHoldingArray[3] - vertexHoldingArray[0];
+    let diff10y = vertexHoldingArray[4] - vertexHoldingArray[1];
+    let diff10z = vertexHoldingArray[5] - vertexHoldingArray[2];
+    let diff20x = vertexHoldingArray[6] - vertexHoldingArray[0];
+    let diff20y = vertexHoldingArray[7] - vertexHoldingArray[1];
+    let diff20z = vertexHoldingArray[8] - vertexHoldingArray[2];
+    let normx = diff10y*diff20z-diff10z*diff20y;
+    let normy = diff10z*diff20x-diff10x*diff20z;
+    let normz = diff10x*diff20y-diff10y*diff20x;
+    let normLen = Math.sqrt(normx*normx+normy*normy+normz*normz);
     // Write the normal data
-    outSTLString += "facet normal 0,0,0\n";
+    outSTLString += "facet normal";
+    outSTLString += " " + normx/normLen;
+    outSTLString += " " + normy/normLen;
+    outSTLString += " " + normz/normLen;
+    outSTLString += "\n";
     // and write the data for each of the three vertices in turn.
     outSTLString += "outer loop\n";
     for (let vertIdx = 0; vertIdx < 3; vertIdx++) {
       outSTLString += "vertex";
-      outSTLString += " " + vertexList[3*vertIndices[vertIdx]+0];
-      outSTLString += " " + vertexList[3*vertIndices[vertIdx]+1];
-      outSTLString += " " + vertexList[3*vertIndices[vertIdx]+2];
+      outSTLString += " " + vertexHoldingArray[3*vertIdx+0];
+      outSTLString += " " + vertexHoldingArray[3*vertIdx+1];
+      outSTLString += " " + vertexHoldingArray[3*vertIdx+2];
       outSTLString += "\n";
     }
     outSTLString += "endloop\n";
