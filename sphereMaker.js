@@ -561,7 +561,7 @@ function exportAll () {
   // Now go through all of the triangles in the generated geometry...
   let triangleCount = triangleIndexList.length/3;
   for (let triangleIdx=0; triangleIdx < triangleCount; triangleIdx++) {
-    let vertIndices = triangleIndexList.slice(3*triangleIdx, 3);
+    let vertIndices = triangleIndexList.slice(3*triangleIdx, 3*(triangleIdx+1));
     // Write the normal data
     outSTLString += "facet normal 0,0,0\n";
     // and write the data for each of the three vertices in turn.
@@ -577,5 +577,15 @@ function exportAll () {
     outSTLString += "endfacet\n";
   }
   outSTLString += "endsolid texturedSphere\n";
+
+  // Now that we have our string, go ahead and download it
+  var blob = new Blob([outSTLString], {type: 'text/plain'});
+  var elem = window.document.createElement('a');
+  elem.href = window.URL.createObjectURL(blob);
+  elem.download = 'texturedSphere.stl';
+  document.body.appendChild(elem);
+  elem.click();
+  document.body.removeChild(elem);
+  window.URL.revokeObjectURL(blob);
 }
 
