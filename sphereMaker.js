@@ -445,14 +445,30 @@ function getGeneratorDataFromHTML () {
     }
   }
   let distortionInfo = {
-    frequency : parseFloat(document.getElementById("frequency").value),
-    amplitude : .01*parseFloat(document.getElementById("amplitudePercent").value),
+    frequency           : parseFloat(document.getElementById("frequency").value),
+    amplitude           : .01*parseFloat(document.getElementById("amplitudePercent").value),
     waveShapeBlendAlpha : parseFloat(document.getElementById("wavefrontShapeAlpha").value),
-    function  : waveFunctions[document.getElementById("waves").value],
-    width     : parseFloat(document.getElementById("waveShapeWidth").value),
-    offset    : parseFloat(document.getElementById("waveShapeOffset").value)
+    function            : waveFunctions[document.getElementById("waves").value],
+    functionName        : document.getElementById("waves").value,
+    width               : parseFloat(document.getElementById("waveShapeWidth").value),
+    offset              : parseFloat(document.getElementById("waveShapeOffset").value)
   };
   return {sourcePointList, distortionInfo};
+}
+
+function updateHTMLFromDistortionInfo (distortionInfo) {
+  let frequency = distortionInfo.frequency || 1;
+  let amplitudePercent = (distortionInfo.amplitude || .10)*100;
+  let waveShapeBlendAlpha = distortionInfo.waveShapeBlendAlpha || 0;
+  let functionName = distortionInfo.functionName || "Sine";
+  let width = distortionInfo.width || 1;
+  let offset = distortionInfo.offset || 0;
+  document.getElementById("frequency").value = frequency.toString();
+  document.getElementById("amplitudePercent").value = amplitudePercent.toString();
+  document.getElementById("wavefrontShapeAlpha").value = waveShapeBlendAlpha.toString();
+  document.getElementById("waves").value = functionName.toString();
+  document.getElementById("waveShapeWidth").value = width.toString();
+  document.getElementById("waveShapeOffset").value = offset.toString();
 }
 
 function updateSphereFromHTMLData () {
@@ -544,6 +560,60 @@ function onWindowResize (event) {
   renderer.setSize(containerElement.clientWidth, containerElement.clientHeight);
 }
 
+function exportSingleTriangleString(triCoordArray) {
+  // compute difference vectors
+  let diff10x = triCoordArray[3] - triCoordArray[0];
+  let diff10y = triCoordArray[4] - triCoordArray[1];
+  let diff10z = triCoordArray[5] - triCoordArray[2];
+  let diff20x = triCoordArray[6] - triCoordArray[0];
+  let diff20y = triCoordArray[7] - triCoordArray[1];
+  let diff20z = triCoordArray[8] - triCoordArray[2];
+  let normx = diff10y*diff20z-diff10z*diff20y;
+  let normy = diff10z*diff20x-diff10x*diff20z;
+  let normz = diff10x*diff20y-diff10y*diff20x;
+  let normLen = Math.sqrt(normx*normx+normy*normy+normz*normz);
+  // if the normal is too small, we have a degenerate triangle - return the empty string
+  if (normLen < .00001) {
+    return "";
+  }
+  // Write the normal data
+  let outString = "";
+  outString += "facet normal";
+  outString += " " + normx/normLen;
+  outString += " " + normy/normLen;
+  outString += " " + normz/normLen;
+  outString += "\n";
+  // and write the data for each of the three vertices in turn.
+  outString += "outer loop\n";
+  for (let vertIdx = 0; vertIdx < 3; vertIdx++) {
+    outString += "vertex";
+    outString += " " + triCoordArray[3*vertIdx+0];
+    outString += " " + triCoordArray[3*vertIdx+1];
+    outString += " " + triCoordArray[3*vertIdx+2];
+    outString += "\n";
+  }
+  outString += "endloop\n";
+  outString += "endfacet\n";
+  return outString;
+}
+
+function exportTriangleListString(triangleIndexList, vertexList) {
+  // Construct a small 'holding zone' of floats for the three verts of each triangle,
+  // so we can compute cross products a bit more easily and such.
+  let vertexHoldingArray = new Float32Array(9);
+  let outString = "";
+  // Now go through all of the triangles in the generated geometry and write them one by one
+  let triangleCount = triangleIndexList.length/3;
+  for (let triangleIdx=0; triangleIdx < triangleCount; triangleIdx++) {
+    let vertIndices = triangleIndexList.slice(3*triangleIdx, 3*(triangleIdx+1));
+    for (let vertIdx = 0; vertIdx < 3; vertIdx++) {
+      vertexHoldingArray.set(vertexList.slice(3*vertIndices[vertIdx], 3*(vertIndices[vertIdx]+1)), 3*vertIdx);
+    }
+    outString += exportSingleTriangleString(vertexHoldingArray);
+  }
+  return outString;
+}
+
 function exportAll () {
   // First, build up a string representing the STL data
   let outSTLString = "";
@@ -558,45 +628,7 @@ function exportAll () {
   let {vertexList, triangleIndexList} = CombineGeometries(octahedronLocal.faceArray);
   // tweak its vertices
   DistortVertexList(vertexList, sourcePointList, distortionInfo);
-  // Construct a small 'holding zone' of floats for the three verts of each triangle,
-  // so we can compute cross products a bit more easily and such.
-  let vertexHoldingArray = new Float32Array(9);
-  // Now go through all of the triangles in the generated geometry...
-  let triangleCount = triangleIndexList.length/3;
-  for (let triangleIdx=0; triangleIdx < triangleCount; triangleIdx++) {
-    let vertIndices = triangleIndexList.slice(3*triangleIdx, 3*(triangleIdx+1));
-    for (let vertIdx = 0; vertIdx < 3; vertIdx++) {
-      vertexHoldingArray.set(vertexList.slice(3*vertIndices[vertIdx], 3*(vertIndices[vertIdx]+1)), 3*vertIdx);
-    }
-    // compute difference vectors
-    let diff10x = vertexHoldingArray[3] - vertexHoldingArray[0];
-    let diff10y = vertexHoldingArray[4] - vertexHoldingArray[1];
-    let diff10z = vertexHoldingArray[5] - vertexHoldingArray[2];
-    let diff20x = vertexHoldingArray[6] - vertexHoldingArray[0];
-    let diff20y = vertexHoldingArray[7] - vertexHoldingArray[1];
-    let diff20z = vertexHoldingArray[8] - vertexHoldingArray[2];
-    let normx = diff10y*diff20z-diff10z*diff20y;
-    let normy = diff10z*diff20x-diff10x*diff20z;
-    let normz = diff10x*diff20y-diff10y*diff20x;
-    let normLen = Math.sqrt(normx*normx+normy*normy+normz*normz);
-    // Write the normal data
-    outSTLString += "facet normal";
-    outSTLString += " " + normx/normLen;
-    outSTLString += " " + normy/normLen;
-    outSTLString += " " + normz/normLen;
-    outSTLString += "\n";
-    // and write the data for each of the three vertices in turn.
-    outSTLString += "outer loop\n";
-    for (let vertIdx = 0; vertIdx < 3; vertIdx++) {
-      outSTLString += "vertex";
-      outSTLString += " " + vertexHoldingArray[3*vertIdx+0];
-      outSTLString += " " + vertexHoldingArray[3*vertIdx+1];
-      outSTLString += " " + vertexHoldingArray[3*vertIdx+2];
-      outSTLString += "\n";
-    }
-    outSTLString += "endloop\n";
-    outSTLString += "endfacet\n";
-  }
+  outSTLString += exportTriangleListString(triangleIndexList, vertexList);
   outSTLString += "endsolid texturedSphere\n";
 
   // Now that we have our string, go ahead and download it
@@ -610,3 +642,132 @@ function exportAll () {
   window.URL.revokeObjectURL(blob);
 }
 
+function exportTop () {
+  // First, build up a string representing the STL data
+  let outSTLString = "";
+  // Write the header
+  outSTLString += "solid texturedSphereTop\n";
+  // Now generate geometry corresponding to the current distortion
+  // Find the current distortion
+  let {sourcePointList, distortionInfo} = getGeneratorDataFromHTML();
+  // Create the octahedron-sphere
+  let octahedronLocal = new Octahedron();
+  // And combine the geometries into a single vertex and index list.
+  let {vertexList, triangleIndexList} = CombineGeometries(octahedronLocal.faceArray);
+  // tweak its vertices
+  DistortVertexList(vertexList, sourcePointList, distortionInfo);
+  // Now we chop the whole thing in half - we look only at faces with z >= 0.
+  // Fortunately, because of the way the octahedron was built, we know
+  // that we only have to look at the second half of the vertices.
+  let topTriangleList = triangleIndexList.slice(triangleIndexList.length/2);
+  outSTLString += exportTriangleListString(topTriangleList, vertexList);
+  // Now that we've exported all the relevant sides from the 'half-dome' we add
+  // a cap (directly to the STL string) to close the shape.
+  // This is done by (a) finding all the vertices with z=0; (b) sorting
+  // them by angle (i.e., atan2), and (c) building a circular fan from the
+  // origin to those points. Since we know that the vertex list is vertically
+  // symmetric, we can consider just the first half of it; this will avoid
+  // duplicate verts.
+  let zeroVertList = [];
+  for (vertIdx = 0; vertIdx < vertexList.length/2; vertIdx += 3) {
+    if (vertexList[vertIdx+2] == 0) {
+      zeroVertList.push(vertexList.slice(vertIdx, vertIdx+3));
+    }
+  }
+  zeroVertList.sort( (a,b) => (Math.atan2(a[1], a[0]) - Math.atan2(b[1], b[0])) );
+  // We copy the first vertex to the end to make the loop a bit cleaner
+  zeroVertList.push(zeroVertList[0]);
+  for (vertIdx = 0; vertIdx+1 < zeroVertList.length; vertIdx++) {
+    outSTLString += exportSingleTriangleString(
+      [0, 0, 0]
+      .concat(Array.from(zeroVertList[vertIdx+1]))
+      .concat(Array.from(zeroVertList[vertIdx]))
+    );
+  }
+  outSTLString += "endsolid texturedSphereTop\n";
+
+  // Now that we have our string, go ahead and download it
+  var blob = new Blob([outSTLString], {type: 'text/plain'});
+  var elem = window.document.createElement('a');
+  elem.href = window.URL.createObjectURL(blob);
+  elem.download = 'texturedSphereTop.stl';
+  document.body.appendChild(elem);
+  elem.click();
+  document.body.removeChild(elem);
+  window.URL.revokeObjectURL(blob);
+}
+
+function exportBottom () {
+  // First, build up a string representing the STL data
+  let outSTLString = "";
+  // Write the header
+  outSTLString += "solid texturedSphereBottom\n";
+  // Now generate geometry corresponding to the current distortion
+  // Find the current distortion
+  let {sourcePointList, distortionInfo} = getGeneratorDataFromHTML();
+  // Create the octahedron-sphere
+  let octahedronLocal = new Octahedron();
+  // And combine the geometries into a single vertex and index list.
+  let {vertexList, triangleIndexList} = CombineGeometries(octahedronLocal.faceArray);
+  // tweak its vertices
+  DistortVertexList(vertexList, sourcePointList, distortionInfo);
+  // Chop in half, taking the first half of the triangles
+  let bottomTriangleList = triangleIndexList.slice(0, triangleIndexList.length/2);
+  outSTLString += exportTriangleListString(bottomTriangleList, vertexList);
+  // Add the same cap as before (facing the other way)
+  let zeroVertList = [];
+  for (vertIdx = 0; vertIdx < vertexList.length/2; vertIdx += 3) {
+    if (vertexList[vertIdx+2] == 0) {
+      zeroVertList.push(vertexList.slice(vertIdx, vertIdx+3));
+    }
+  }
+  zeroVertList.sort( (a,b) => (Math.atan2(a[1], a[0]) - Math.atan2(b[1], b[0])) );
+  // We copy the first vertex to the end to make the loop a bit cleaner
+  zeroVertList.push(zeroVertList[0]);
+  for (vertIdx = 0; vertIdx+1 < zeroVertList.length; vertIdx++) {
+    outSTLString += exportSingleTriangleString(
+      [0, 0, 0]
+      .concat(Array.from(zeroVertList[vertIdx]))
+      .concat(Array.from(zeroVertList[vertIdx+1]))
+    );
+  }
+  outSTLString += "endsolid texturedSphereBottom\n";
+
+  // Now that we have our string, go ahead and download it
+  var blob = new Blob([outSTLString], {type: 'text/plain'});
+  var elem = window.document.createElement('a');
+  elem.href = window.URL.createObjectURL(blob);
+  elem.download = 'texturedSphereBottom.stl';
+  document.body.appendChild(elem);
+  elem.click();
+  document.body.removeChild(elem);
+  window.URL.revokeObjectURL(blob);
+}
+
+function saveDesign() {
+  let designInfo = getGeneratorDataFromHTML();
+  outString = JSON.stringify(designInfo);
+  // Now that we have our string, go ahead and download it
+  var blob = new Blob([outString], {type: 'text/plain'});
+  var elem = window.document.createElement('a');
+  elem.href = window.URL.createObjectURL(blob);
+  elem.download = 'sphereDesign.json';
+  document.body.appendChild(elem);
+  elem.click();
+  document.body.removeChild(elem);
+  window.URL.revokeObjectURL(blob);
+}
+
+function onLoadDesign(inputElement) {
+  let file = inputElement.files[0];
+  let reader = new FileReader();
+  reader.onload = evt => loadDesignFromJSON(evt.target.result);
+  reader.readAsText(file);
+}
+
+function loadDesignFromJSON(jsonString) {
+  let designInfo = JSON.parse(jsonString);
+  updateHTMLFromPointList(designInfo.sourcePointList);
+  updateHTMLFromDistortionInfo(designInfo.distortionInfo);
+  updateSphereFromHTMLData();
+}

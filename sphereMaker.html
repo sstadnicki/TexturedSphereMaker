@@ -77,14 +77,23 @@
       <input id="amplitudePercent" type="text" value="2" onchange="updateSphereFromHTMLData()">
     </div>
   </div>
+  <div class="saveLoad">
+    <button type="button" onclick="saveDesign()">
+      Save Design
+    </button>
+    <div>
+    Load Design:
+    <input type="file" accept=".json" onchange="onLoadDesign(this)">
+    </div>
+  </div>
   </div>
   <div class="exportTop">
-    <button type="button" style="display: block; margin: 0 auto;">
+    <button type="button" style="display: block; margin: 0 auto;" onclick="exportTop()">
       EXPORT TOP
     </button>
   </div>
   <div class="exportBottom">
-    <button type="button" style="display: block; margin: 0 auto;">
+    <button type="button" style="display: block; margin: 0 auto;" onclick="exportBottom()">
       EXPORT BOTTOM
     </button>
   </div>
